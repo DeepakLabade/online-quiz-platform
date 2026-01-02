@@ -1,0 +1,157 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+model User {
+  id String @id @default(uuid())
+  email String  @unique
+  username  String
+  password String
+  verifyCode String
+  verifyCodeExpiry DateTime
+  isVerified Boolean
+  twoFAenabled Boolean @default(false)
+  role Role @default(student)
+
+  refreshToken RefreshToken[]
+  quizzes Quiz[] @relation()
+  attempts QuizAttempt[]
+  activityLog ActivityLog[]
+
+  createdAt DateTime @default(now())
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  tokenHash String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+}
+
+enum Role {
+  admin
+  teacher 
+  student
+}
+
+enum Difficulty {
+  easy
+  medium
+  hard
+}
+
+enum QuestionType {
+  MCQ
+  TRUE_FALSE
+}
+
+model Quiz {
+  id               String     @id @default(uuid())
+  title            String
+  subject          String
+  grade            String
+  difficulty       Difficulty
+  durationMinutes  Int
+  tags             String[]
+
+  negativeMarks  Float @default(0)
+  maxAttemps Int?
+  Duration Int 
+
+  createdById String
+  createdBy User @relation(fields: [createdById], references: [id])
+
+  questions Question[]
+  attemps QuizAttempt[]
+
+  createdAt DateTime @default(now())
+}
+
+model Question {
+  id String @id @default(uuid())
+  quizId String
+  quiz Quiz @relation(fields: [quizId], references: [id])
+
+  text String
+  type QuestionType
+  difficulty Difficulty
+  marks Float
+  negativeMarks Float @default(0)
+
+  attemptAnswers AttemptAnswer[]
+
+  options Option[]
+  correctAnswer String
+
+  createdAt DateTime @default(now())
+}
+
+model Option {
+  id String @id @default(uuid())
+  questionId String
+  question Question @relation(fields: [questionId], references: [id])
+
+  text String
+}
+
+model QuizAttempt {
+  id String @id @default(uuid())
+  quizId String
+  quiz Quiz @relation(fields: [quizId], references: [id])
+
+  studentId String  
+  student User @relation(fields: [studentId], references: [id])
+
+  status AttemptStatus
+  score Float?
+  startedAt DateTime @default(now())
+  submittedAt DateTime?
+
+  answers AttemptAnswer[]
+
+  @@index([quizId, studentId])
+}
+
+enum AttemptStatus {
+  inProgress
+  submitted
+  autoSubmitted
+}
+
+model AttemptAnswer {
+  id String @id @default(uuid())
+  attemptId String
+  attempt QuizAttempt @relation(fields: [attemptId], references: [id])
+
+  questionId String
+  question Question @relation(fields: [questionId], references: [id])
+
+  selected String
+  isCorrect Boolean
+  marksAwarded Float
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  action    String
+  metadata  Json?
+
+  createdAt DateTime @default(now())
+}
