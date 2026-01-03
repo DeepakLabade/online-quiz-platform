@@ -1,7 +1,9 @@
 import { sendVerificationEmail } from "@/helper/send-verify-email";
 import prisma from "@/lib/db";
 import signupSchema from "@/schemas/sign-up";
+import { generateAccessToken, generateRefreshToken } from "@/utils/generate-token";
 import bcrypt from "bcryptjs";
+import { cookies } from "next/headers";
 
 export async function POST(req: Request) {
     const parsedData = signupSchema.safeParse(await req.json())
@@ -51,6 +53,7 @@ export async function POST(req: Request) {
         const hashedPassword = await bcrypt.hash(password, 13);
         const hashedVerifyCode = await bcrypt.hash(verifyCode, 13);
 
+        let newUser;
 
         if (existingVerifiedUserwithEmail) {
             if (existingVerifiedUserwithEmail.isVerified) {
@@ -61,12 +64,14 @@ export async function POST(req: Request) {
                     status: 409
                 })
             } else {
-                const newUser = await prisma.user.update({
+                newUser = await prisma.user.update({
                     where: {
                         email
                     }, 
                     data: {
                         isVerified: false,
+                        role: role,
+                        email,
                         password: hashedPassword,
                         username: username,
                         verifyCode: hashedVerifyCode,
@@ -76,12 +81,12 @@ export async function POST(req: Request) {
                 })
             }
         } else {
-            const newUser = await prisma.user.create({
+            newUser = await prisma.user.create({
                 data: {
                     username,
                     email,
                     twoFAenabled: false,
-
+                    role: role,
                     password: hashedPassword,
                     isVerified: false,
                     verifyCodeExpiry,
@@ -91,12 +96,44 @@ export async function POST(req: Request) {
                     username: true,
                     email: true,
                     id: true,
-                    isVerified: true
+                    isVerified: true,
+                    role: true
                 }
             })
         }
+
+        const accessToken = await generateAccessToken({userId: newUser.id, role: newUser.role})
+        const refreshToken = await generateRefreshToken({userId: newUser.id, role: newUser.role})
+
+        const hashRefreshtoken = await bcrypt.hash(refreshToken, 13)
+
+        await prisma.refreshToken.create({
+            data: {
+                tokenHash: hashRefreshtoken,
+                userId: newUser.id,
+                expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+            }
+        })
+
+
         // @ts-ignore
         const sendsVerificationEmailStatus = await sendVerificationEmail({email, username, verifyCode})
+
+        const cookieStore = await cookies();
+
+        cookieStore.set("refreshToken", refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+            path: "/",
+          });
+          
+          cookieStore.set("accessToken", accessToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+            path: "/",
+          });
         
         return Response.json({
             msg: "signup succesfully, Please verify your Email"
