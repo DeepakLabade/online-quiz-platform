@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
-const PUBLIC_PATHS = [
+const PUBLIC_PAGES = [
+  "/home",
   "/login",
   "/signup",
-  "/api/auth/sign-in",
-  "/api/auth/sign-up",
-  "/api/auth/verify",
+];
+
+const PUBLIC_API_PREFIXES = [
+  "/api/auth",
 ];
 
 // Convert secret to Uint8Array (REQUIRED for jose)
@@ -17,10 +19,22 @@ const secret = new TextEncoder().encode(
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  if (PUBLIC_PATHS.some((path) => pathname.startsWith(path))) {
+  // ✅ Redirect only ROOT
+  if (pathname === "/") {
+    return NextResponse.redirect(new URL("/home", req.url));
+  }
+
+  // ✅ Allow public pages (EXACT match)
+  if (PUBLIC_PAGES.includes(pathname)) {
     return NextResponse.next();
   }
 
+  // ✅ Allow public auth APIs
+  if (PUBLIC_API_PREFIXES.some(prefix => pathname.startsWith(prefix))) {
+    return NextResponse.next();
+  }
+
+  // 🔐 Protected routes
   const token = req.cookies.get("accessToken")?.value;
 
   if (!token) {
@@ -37,10 +51,23 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next({
       request: { headers },
     });
-  } catch (error) {
-    const res = NextResponse.redirect(new  URL("/login", req.url));
+  } catch {
+    const res = NextResponse.redirect(new URL("/login", req.url));
     res.cookies.delete("accessToken");
     res.cookies.delete("refreshToken");
     return res;
   }
 }
+
+/* 🔥 MOST IMPORTANT PART (DO NOT SKIP) */
+export const config = {
+  matcher: [
+    /*
+      Exclude:
+      - next static files (css/js)
+      - image optimizer
+      - favicon
+    */
+    '/((?!_next/static|_next/image|favicon.ico).*)',
+  ],
+};

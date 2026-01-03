@@ -36,7 +36,8 @@ export async function POST(req: Request) {
         );
       }
 
-    const isCodeValid = await bcrypt.compare(verifyCode, currUser.verifyCode)
+    // const isCodeValid = await bcrypt.compare(verifyCode, currUser.verifyCode)
+    const isCodeValid = verifyCode == currUser.verifyCode
     const isCodeNotExpired = new Date(currUser.verifyCodeExpiry) > new Date()
 
     if(!isCodeValid) {
@@ -70,7 +71,7 @@ export async function POST(req: Request) {
 
     return Response.json({
         msg: "user is verified",
-        status: true
+        success: true
     }, {
         status: 200
     })

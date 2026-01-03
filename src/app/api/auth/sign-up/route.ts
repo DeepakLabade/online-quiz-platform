@@ -51,7 +51,7 @@ export async function POST(req: Request) {
 
                 
         const hashedPassword = await bcrypt.hash(password, 13);
-        const hashedVerifyCode = await bcrypt.hash(verifyCode, 13);
+        // const hashedVerifyCode = await bcrypt.hash(verifyCode, 13);
 
         let newUser;
 
@@ -74,7 +74,7 @@ export async function POST(req: Request) {
                         email,
                         password: hashedPassword,
                         username: username,
-                        verifyCode: hashedVerifyCode,
+                        verifyCode,
                         verifyCodeExpiry,
                         twoFAenabled
                     }
@@ -90,7 +90,7 @@ export async function POST(req: Request) {
                     password: hashedPassword,
                     isVerified: false,
                     verifyCodeExpiry,
-                    verifyCode: hashedVerifyCode
+                    verifyCode
                 },
                 select: {
                     username: true,

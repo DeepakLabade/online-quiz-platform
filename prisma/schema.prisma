@@ -70,7 +70,7 @@ model Quiz {
 
   negativeMarks  Float @default(0)
   maxAttemps Int?
-  Duration Int 
+  Duration Int? 
 
   createdById String
   createdBy User @relation(fields: [createdById], references: [id])

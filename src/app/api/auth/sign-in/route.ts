@@ -96,6 +96,7 @@ export async function POST(req: Request) {
       {
         msg: "user loggedIn successfully",
         success: true,
+        role: existingUser.role
       },
       {
         status: 200,
