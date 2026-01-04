@@ -15,7 +15,6 @@ export async function GET(
       );
     }
 
-    // Fetch quiz with nested questions and nested options
     const quiz = await prisma.quiz.findUnique({
       where: {
         id: quizId,
@@ -23,7 +22,7 @@ export async function GET(
       include: {
         questions: {
           include: {
-            options: true, // This gets the specific options for each question
+            options: true,
           },
         },
       },
@@ -36,7 +35,6 @@ export async function GET(
       );
     }
 
-    // Clean response
     return NextResponse.json({
       success: true,
       quiz: {
@@ -51,8 +49,6 @@ export async function GET(
             text: o.text,
           })),
           marks: q.marks,
-          // Note: We do NOT send 'correctAnswer' here to prevent cheating
-          // via browser inspection/network tab.
         })),
       },
     });

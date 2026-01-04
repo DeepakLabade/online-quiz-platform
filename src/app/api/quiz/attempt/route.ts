@@ -8,8 +8,6 @@ export async function POST(req: Request) {
     console.log(userId)
     const { quizId, studentId, questionId, selectedOption, isLastQuestion } = body;
 
-    // 1. Find or Create the QuizAttempt
-    // We look for an "IN_PROGRESS" attempt for this specific student and quiz
     let attempt = await prisma.quizAttempt.findFirst({
       where: {
         quizId,
@@ -28,9 +26,7 @@ export async function POST(req: Request) {
       });
     }
 
-    // 2. Handle the Answer saving
     if (questionId && selectedOption) {
-      // Fetch question to verify correctness and marks
       const question = await prisma.question.findUnique({
         where: { id: questionId },
       });
@@ -42,11 +38,8 @@ export async function POST(req: Request) {
       const isCorrect = question.correctAnswer === selectedOption;
       const marksAwarded = isCorrect ? question.marks : -question.negativeMarks;
 
-      // Upsert the answer: if they change their mind, it updates the same record
       await prisma.attemptAnswer.upsert({
         where: {
-          // Note: You may need a unique constraint on [attemptId, questionId] in your schema
-          // for this specific 'where' to work, otherwise use delete/create logic.
           id: `${attempt.id}-${questionId}`, 
         },
         update: {
@@ -65,7 +58,6 @@ export async function POST(req: Request) {
       });
     }
 
-    // 3. If it's the last question, calculate total score and close the attempt
     if (isLastQuestion) {
       const allAnswers = await prisma.attemptAnswer.findMany({
         where: { attemptId: attempt.id },

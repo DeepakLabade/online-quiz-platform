@@ -4,7 +4,6 @@ export async function GET(req: Request) {
   try {
     const userId = req.headers.get("user-id");
 
-    // 1️⃣ Auth guard
     if (!userId) {
       return Response.json(
         { success: false, msg: "Unauthorized" },
@@ -12,14 +11,12 @@ export async function GET(req: Request) {
       );
     }
 
-    // 2️⃣ Count attempted quizzes
     const totalQuizzes = await prisma.quizAttempt.count({
       where: {
         studentId: userId,
       },
     });
 
-    // 3️⃣ Fetch attempted quizzes (lightweight)
     const attemptedQuizzes = await prisma.quizAttempt.findMany({
       where: {
         studentId: userId,

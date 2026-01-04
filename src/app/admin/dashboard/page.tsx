@@ -22,13 +22,12 @@ export default function AdminDashboard() {
     fetchStats();
   }, []);
 
-  if (loading) return <div className="p-12 text-gray-400 font-mono">Loading system metrics...</div>;
+  if (loading) return <div className="p-12 text-gray-400 flex h-screen items-center justify-center font-mono">Loading system metrics...</div>;
 
   return (
     <div className="min-h-screen bg-[#f9fafb] p-4 sm:p-8 text-slate-900">
       <div className="max-w-7xl mx-auto">
         
-        {/* Header */}
         <header className="mb-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Platform Overview</h1>
@@ -36,11 +35,10 @@ export default function AdminDashboard() {
           </div>
         </header>
 
-        {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-          <StatCard label="Total Students" value={stats.studentCount} change="+12% this month" />
-          <StatCard label="Active Quizzes" value={stats.quizCount} change="4 categories" />
-          <StatCard label="Total Attempts" value={stats.attemptCount} change="Lifetime" />
+          <StatCard label="Total Students" value={stats.studentCount} />
+          <StatCard label="Active Quizzes" value={stats.quizCount}  />
+          <StatCard label="Total Attempts" value={stats.attemptCount} />
         </div>
 
         {/* Tables Section */}
@@ -50,7 +48,6 @@ export default function AdminDashboard() {
           <div className="lg:col-span-2 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
               <h2 className="font-bold text-slate-800">Recent Quiz Attempts</h2>
-              <button className="text-xs font-semibold text-indigo-600 hover:underline">View All</button>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
@@ -92,12 +89,11 @@ export default function AdminDashboard() {
   );
 }
 
-function StatCard({ label, value, change }: { label: string, value: any, change: string }) {
+function StatCard({ label, value }: { label: string, value: any }) {
   return (
     <div className="bg-white border border-slate-200 p-6 rounded-xl shadow-sm">
       <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">{label}</p>
-      <h3 className="text-3xl font-bold text-slate-900 mb-2">{value}</h3>
-      <p className="text-xs text-slate-400 font-medium">{change}</p>
+      <h3 className="text-3xl font-bold text-slate-900">{value}</h3>
     </div>
   );
 }

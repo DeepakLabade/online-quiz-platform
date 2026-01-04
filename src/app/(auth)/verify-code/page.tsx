@@ -1,9 +1,9 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';//@ts-ignore
 import axios, { AxiosError } from 'axios';
+import { toast } from 'sonner';
 
 interface VerifyResponse {
   success: boolean;
@@ -22,6 +22,8 @@ export default function VerifyCodePage() {
   useEffect(() => {
     if (!email) {
       setError('Invalid verification link. Please sign up again.');
+      toast("Invalid verification link. Please sign up again.")
+      router.push("/signup")
     }
   }, [email]);
 
@@ -30,11 +32,13 @@ export default function VerifyCodePage() {
 
     if (!email) {
       setError('Email not found. Please sign up again.');
+      toast("Email not found. Please sign up again.")
       return;
     }
 
     if (code.length !== 6) {
       setError('Please enter a 6-digit code.');
+      toast('Please enter a 6-digit code.')
       return;
     }
 
@@ -44,7 +48,7 @@ export default function VerifyCodePage() {
 
       console.log('Sending verification request:', { verifyCode: code, email });
 
-      const { data } = await axios.post<VerifyResponse>(
+      const { data } : any = await axios.post<VerifyResponse>(
         '/api/auth/verify',
         {
           verifyCode: code,
@@ -55,8 +59,10 @@ export default function VerifyCodePage() {
       console.log('Verification response:', data);
 
       if (data.success) {
+        toast(data.msg)
         router.push('/dashboard');
       } else {
+        toast("verification failed")
         throw new Error(data.message || 'Verification failed');
       }
     } catch (err) {
@@ -75,31 +81,6 @@ export default function VerifyCodePage() {
       );
 
       setCode('');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleResendCode = async () => {
-    if (!email) {
-      setError('Email not found.');
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      setError('');
-
-      await axios.post('/api/auth/resend-code', { email });
-      
-      alert('Verification code sent successfully!');
-    } catch (err) {
-      const axiosError = err as AxiosError<VerifyResponse>;
-      
-      setError(
-        axiosError.response?.data?.message ||
-        'Failed to resend code.'
-      );
     } finally {
       setIsLoading(false);
     }
@@ -164,19 +145,6 @@ export default function VerifyCodePage() {
               {isLoading ? 'Verifying…' : 'Verify Code'}
             </button>
           </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-slate-600 text-sm mb-2">
-              Didn't receive the code?
-            </p>
-            <button
-              onClick={handleResendCode}
-              disabled={isLoading}
-              className="text-blue-600 hover:text-blue-700 font-medium text-sm disabled:opacity-50"
-            >
-              Resend Code
-            </button>
-          </div>
 
           <div className="mt-6 text-center">
             <Link href="/signup" className="text-slate-600 hover:text-slate-900 text-sm">

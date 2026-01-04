@@ -1,7 +1,9 @@
 "use client"
+import { StringFieldRefInput } from '@/generated/prisma/internal/prismaNamespace';
 import axios from 'axios';
 import { redirect, useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -13,21 +15,29 @@ export default function LoginPage() {
   const handleSubmit = async (e:any) => {
     e.preventDefault();
     setLoading(true);
-
-    const result = await axios.post("/api/auth/sign-in", {
+  
+    try {
+      const result: any = await axios.post("/api/auth/sign-in", {
         email,
         password
     })
-
+    toast(result.data?.msg!)
       setLoading(false);
     //@ts-ignore
       if(result.data?.role == "admin") {
-        redirect("/admin/dashboard") //@ts-ignore
+        router.push("/admin/dashboard") //@ts-ignore
       } else if(result.data?.role == "teacher") {
-          redirect("/teacher/dashboard")
+          router.push("/teacher/dashboard")
       } else {
-        redirect("/student/quizzes")
-      }
+        router.push("/student/quizzes")
+      }  
+    } catch (error: any) {
+      toast.error(
+        error instanceof Error ? error.message : "Something went wrong"
+      );
+    }
+
+    
   };
 
   return (

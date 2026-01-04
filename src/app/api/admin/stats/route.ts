@@ -3,13 +3,11 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
-    // 1. Get counts for the StatCards
     const studentCount = await prisma.user.count({ where: { role: 'student' } });
     const quizCount = await prisma.quiz.count();
     const attemptCount = await prisma.quizAttempt.count();
 
 
-    // 3. Get Recent Activity
     const recentAttempts = await prisma.quizAttempt.findMany({
       take: 6,
       orderBy: { startedAt: 'desc' },

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import axios from "axios"
+import { toast } from 'sonner';
 
 export default function SignupPage() {
 
@@ -63,24 +64,27 @@ export default function SignupPage() {
     e.preventDefault();
     try {
         if (validateForm()) {
-          console.log('Form submitted:', formData);
-            const response = await axios.post("/api/auth/sign-up", {
+            const response: any = await axios.post("/api/auth/sign-up", {
                 username: formData.username,
                 email: formData.email,
                 password: formData.password,
                 role: formData.role
             })
-            console.log("Signup success:", response.data);
-    
+            toast(response.data.msg)
             router.push(`/verify-code?email=${encodeURIComponent(formData.email)}`);
         }
+
     } catch (error: any) {
         console.error("Signup error:", error);
-
+        toast.error(
+          error instanceof Error ? error.message : "Signup error"
+        );
     if (error.response?.data?.msg) {
-      alert(error.response.data.msg);
+      toast.error(
+        error instanceof Error ? error.message : "Something went wrong"
+      );
     } else {
-      alert("Signup failed. Please try again.");
+      toast("signup failed. please try again")
     }
     }
   };
@@ -168,7 +172,7 @@ export default function SignupPage() {
                   )}
                 </button>
               </div>
-              {errors.password && (
+              {errors.password && ( //@ts-ignore
                 <p className="text-red-500 text-sm mt-1">{errors.password}</p>
               )}
             </div>
