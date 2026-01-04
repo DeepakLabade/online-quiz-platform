@@ -1,12 +1,14 @@
 "use client"
 import axios from 'axios';
-import { redirect } from 'next/navigation';
+import { redirect, useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const router = useRouter()
 
   const handleSubmit = async (e:any) => {
     e.preventDefault();
@@ -26,14 +28,12 @@ export default function LoginPage() {
       } else if(result.data?.role == "teacher") {
           redirect("/teacher/dashboard")
       } else {
-        redirect("/dashboard")
+        redirect("/student/quizzes")
       }
   };
 
   const handleSignupRedirect = () => {
-    // In actual Next.js, use: router.push('/signup')
-    console.log('Redirecting to /signup');
-    alert('In your Next.js app, this would redirect to /signup using next/navigation');
+    router.push("/signup")
   };
 
   return (

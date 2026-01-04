@@ -36,10 +36,16 @@ export async function middleware(req: NextRequest) {
 
   // 🔐 Protected routes
   const token = req.cookies.get("accessToken")?.value;
+  const refreshToken = req.cookies.get("refreshToken")?.value
 
-  if (!token) {
-    return NextResponse.redirect(new URL("/login", req.url));
+  if(!refreshToken) {
+    return NextResponse.redirect(new URL("/login", req.url))
   }
+  
+  if (!token) {
+    return NextResponse.redirect(new URL("/api/auth/refresh-token", req.url));
+  }
+
 
   try {
     const { payload } = await jwtVerify(token, secret);
