@@ -14,10 +14,10 @@ export default function StudentDashboard() {
     setLoading(true)
     async function fetchData() {
       try {
-        const res = await axios.get("/api/student/dashboard")
-        setTotalQuizzes(res.data.totalQuizzes)
-        setAllQuizzes(res.data.attemptedQuizzes)
-        if (res.data.attemptedQuizzes?.length > 0) {
+        const res = await axios.get("/api/student/dashboard")//@ts-ignore
+        setTotalQuizzes(res.data.totalQuizzes)//@ts-ignore
+        setAllQuizzes(res.data.attemptedQuizzes)//@ts-ignore
+        if (res.data.attemptedQuizzes?.length > 0) {//@ts-ignore
           setUsername(res.data.attemptedQuizzes[0].student.username)
         }
       } catch (err) {

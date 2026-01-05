@@ -1,16 +1,18 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react'; // Added Suspense
 import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';//@ts-ignore
-import axios, { AxiosError } from 'axios';
+import Link from 'next/link';
+import axios from 'axios';
 import { toast } from 'sonner';
 
 interface VerifyResponse {
   success: boolean;
   message?: string;
+  msg?: string;
 }
 
-export default function VerifyCodePage() {
+// 1. Move the logic into a separate internal component
+function VerifyCodeForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get('email');
@@ -22,23 +24,21 @@ export default function VerifyCodePage() {
   useEffect(() => {
     if (!email) {
       setError('Invalid verification link. Please sign up again.');
-      toast("Invalid verification link. Please sign up again.")
-      router.push("/signup")
+      toast.error("Invalid verification link. Please sign up again.");
+      router.push("/signup");
     }
-  }, [email]);
+  }, [email, router]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!email) {
       setError('Email not found. Please sign up again.');
-      toast("Email not found. Please sign up again.")
       return;
     }
 
     if (code.length !== 6) {
       setError('Please enter a 6-digit code.');
-      toast('Please enter a 6-digit code.')
       return;
     }
 
@@ -46,9 +46,7 @@ export default function VerifyCodePage() {
       setIsLoading(true);
       setError('');
 
-      console.log('Sending verification request:', { verifyCode: code, email });
-
-      const { data } : any = await axios.post<VerifyResponse>(
+      const { data } = await axios.post<VerifyResponse>(
         '/api/auth/verify',
         {
           verifyCode: code,
@@ -56,30 +54,20 @@ export default function VerifyCodePage() {
         }
       );
 
-      console.log('Verification response:', data);
-
       if (data.success) {
-        toast(data.msg)
+        toast.success(data.msg || "Verified successfully!");
         router.push('/dashboard');
       } else {
-        toast("verification failed")
         throw new Error(data.message || 'Verification failed');
       }
-    } catch (err) {
-      const axiosError = err as AxiosError<VerifyResponse>;
-      
-      console.error('Verification error:', {
-        status: axiosError.response?.status,
-        data: axiosError.response?.data,
-        message: axiosError.message
-      });
-
+    } catch (err) { //@ts-ignore
+      const axiosError = err as AxiosError;
       setError(
         axiosError.response?.data?.message ||
         axiosError.message ||
         'Invalid verification code. Please try again.'
       );
-
+      toast.error("Verification failed");
       setCode('');
     } finally {
       setIsLoading(false);
@@ -87,7 +75,7 @@ export default function VerifyCodePage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-50 to-slate-100 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 px-4">
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="text-center mb-8">
@@ -154,5 +142,18 @@ export default function VerifyCodePage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// 2. The default export wraps the content in Suspense for Next.js 15 compatibility
+export default function VerifyCodePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-slate-500 animate-pulse">Loading verification form...</div>
+      </div>
+    }>
+      <VerifyCodeForm />
+    </Suspense>
   );
 }

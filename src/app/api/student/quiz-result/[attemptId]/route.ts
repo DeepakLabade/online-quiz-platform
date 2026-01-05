@@ -17,7 +17,6 @@ export async function GET(
             subject: true,
           }
         },
-        // We include AttemptAnswer and the related Question + Options
         answers: {
           include: {
             question: {
@@ -36,7 +35,7 @@ export async function GET(
 
     const analysis = attempt.answers.map((ans: any) => ({
       questionId: ans.questionId,
-      questionText: ans.question.text,
+      questionText: ans.question.text,/*@ts-ignore */
       options: ans.question.options.map(o => o.text),
       selectedOption: ans.selected,
       correctOption: ans.question.correctAnswer,

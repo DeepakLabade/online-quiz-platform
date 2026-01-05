@@ -1,10 +1,10 @@
 "use client"
 import axios from 'axios';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, Suspense } from 'react'; // Added Suspense
 import { toast } from 'sonner';
 
-export default function CreateQuestion() {
+function CreateQuestionContent() {
   const [formData, setFormData] = useState({
     question: '',
     options: ['', ''],
@@ -63,7 +63,7 @@ export default function CreateQuestion() {
       }
     } catch (err) {
       console.error(err);
-      alert('Error occurred');
+      toast.error('Error occurred');
     }
   };
 
@@ -120,7 +120,6 @@ export default function CreateQuestion() {
           <p className="text-xs text-gray-500 mt-2">Select the correct answer choice</p>
         </div>
 
-        {/* Buttons Section */}
         <div className="pt-4 space-y-3">
           <button
             type="submit"
@@ -148,5 +147,18 @@ export default function CreateQuestion() {
         </div>
       </form>
     </div>
+  );
+}
+
+// 2. The default export wraps the content in Suspense
+export default function CreateQuestion() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-pulse text-gray-500 font-mono">Loading form...</div>
+      </div>
+    }>
+      <CreateQuestionContent />
+    </Suspense>
   );
 }
