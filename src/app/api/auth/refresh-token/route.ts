@@ -47,10 +47,7 @@ export async function POST() {
       );
     }
 
-    const isValid = await bcrypt.compare(
-      refreshToken,
-      storedToken.tokenHash
-    );
+    const isValid = await bcrypt.compare(refreshToken, storedToken.tokenHash);
 
     if (!isValid) {
       await prisma.refreshToken.deleteMany({
@@ -63,9 +60,18 @@ export async function POST() {
       );
     }
 
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId },
+      select: { role: true }
+    });
+
+    if (!user) {
+      return Response.json({ msg: "User not found" }, { status: 404 });
+    }
+
     const newAccessToken = await generateAccessToken({
       userId: payload.userId,
-      role: payload.role,
+      role: user.role,
     });
 
     cookieStore.set("accessToken", newAccessToken, {
@@ -76,7 +82,11 @@ export async function POST() {
     });
 
     return Response.json(
-      { msg: "Access token refreshed", success: true },
+      { 
+        msg: "Access token refreshed", 
+        success: true, 
+        role: user.role
+      },
       { status: 200 }
     );
 
