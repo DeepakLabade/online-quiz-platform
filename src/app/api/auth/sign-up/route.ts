@@ -1,151 +1,130 @@
-import { sendVerificationEmail } from "@/helper/send-verify-email";
+import { verifyUserEmail } from "@/email/verify-user-email";
 import prisma from "@/lib/db";
+import { transporter } from "@/lib/node-mail";
 import signupSchema from "@/schemas/sign-up";
 import { generateAccessToken, generateRefreshToken } from "@/utils/generate-token";
+import { render } from "@react-email/render";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 
 export async function POST(req: Request) {
-    const parsedData = signupSchema.safeParse(await req.json())
+  try {
+    const body = await req.json();
+    const parsedData = signupSchema.safeParse(body);
 
     if (!parsedData.success) {
-        console.log(parsedData.error.format())
-        return Response.json({
-            msg: "invalid credentials",
-            error: parsedData.error.flatten()
-        }, {
-            status: 400
-        })
+      return Response.json({
+        msg: "Invalid input data",
+        errors: parsedData.error.flatten()
+      }, { status: 400 });
     }
 
-    const {username, email, password, role} = parsedData.data
+    const { username, email, password, role } = parsedData.data;
 
-    try {
-        const existingVerifiedUserwithUsername = await prisma.user.findFirst({
-            where: {
-                username,
-                isVerified: true
-            }
-        })
+    // 1. Check if verified username already exists
+    const existingUserByUsername = await prisma.user.findFirst({
+      where: { username, isVerified: true }
+    });
 
-        if (existingVerifiedUserwithUsername) {
-            return Response.json({
-                msg: "username already exist"
-            }, {
-                status: 409
-            })
-        }
-
-        const existingVerifiedUserwithEmail = await prisma.user.findFirst({
-            where: {
-                email,
-            }
-        })
-
-        const twoFAenabled = role === "admin" ? true : false;
-
-        const verifyCodeExpiry = new Date()
-        verifyCodeExpiry.setHours(verifyCodeExpiry.getHours() + 1)
-
-        const verifyCode = Math.floor(100000 + Math.random() * 900000).toString();
-
-                
-        const hashedPassword = await bcrypt.hash(password, 13);
-        // const hashedVerifyCode = await bcrypt.hash(verifyCode, 13);
-
-        let newUser;
-
-        if (existingVerifiedUserwithEmail) {
-            if (existingVerifiedUserwithEmail.isVerified) {
-                return Response.json({
-                    msg: "user already exist",
-                    status: false
-                }, {
-                    status: 409
-                })
-            } else {
-                newUser = await prisma.user.update({
-                    where: {
-                        email
-                    }, 
-                    data: {
-                        isVerified: false,
-                        role: role,
-                        email,
-                        password: hashedPassword,
-                        username: username,
-                        verifyCode,
-                        verifyCodeExpiry,
-                        twoFAenabled
-                    }
-                })
-            }
-        } else {
-            newUser = await prisma.user.create({
-                data: {
-                    username,
-                    email,
-                    twoFAenabled: false,
-                    role: role,
-                    password: hashedPassword,
-                    isVerified: false,
-                    verifyCodeExpiry,
-                    verifyCode
-                },
-                select: {
-                    username: true,
-                    email: true,
-                    id: true,
-                    isVerified: true,
-                    role: true
-                }
-            })
-        }
-
-        const accessToken = await generateAccessToken({userId: newUser.id, role: newUser.role})
-        const refreshToken = await generateRefreshToken({userId: newUser.id, role: newUser.role})
-
-        const hashRefreshtoken = await bcrypt.hash(refreshToken, 13)
-
-        await prisma.refreshToken.create({
-            data: {
-                tokenHash: hashRefreshtoken,
-                userId: newUser.id,
-                expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-            }
-        })
-
-
-        // @ts-ignore
-        const sendsVerificationEmailStatus = await sendVerificationEmail({email, username, verifyCode})
-
-        const cookieStore = await cookies();
-
-        cookieStore.set("refreshToken", refreshToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "strict",
-            path: "/",
-          });
-          
-          cookieStore.set("accessToken", accessToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "strict",
-            path: "/",
-          });
-        
-        return Response.json({
-            msg: "signup succesfully, Please verify your Email"
-        }, {
-            status: 201
-        })
-    } catch (error) {
-        return Response.json({
-            msg: "internal server error while signing up",
-            error: error instanceof Error ? error.message : "unknown error"
-        }, {
-            status: 500
-        })
+    if (existingUserByUsername) {
+      return Response.json({ msg: "Username is already taken" }, { status: 409 });
     }
+
+    // 2. Check if email already exists
+    const existingUserByEmail = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    const verifyCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const verifyCodeExpiry = new Date(Date.now() + 3600000); // 1 hour from now
+    const hashedPassword = await bcrypt.hash(password, 12);
+    const twoFAenabled = role === "admin";
+
+    let user;
+
+    if (existingUserByEmail) {
+      if (existingUserByEmail.isVerified) {
+        return Response.json({ msg: "User with this email already exists" }, { status: 409 });
+      } else {
+        // Update unverified user
+        user = await prisma.user.update({
+          where: { email },
+          data: {
+            username,
+            password: hashedPassword,
+            verifyCode,
+            verifyCodeExpiry,
+            role,
+            twoFAenabled
+          }
+        });
+      }
+    } else {
+      // Create brand new user
+      user = await prisma.user.create({
+        data: {
+          username,
+          email,
+          password: hashedPassword,
+          verifyCode,
+          verifyCodeExpiry,
+          role,
+          isVerified: false,
+          twoFAenabled
+        }
+      });
+    }
+
+    // 3. Token Generation & Storage
+    const accessToken = await generateAccessToken({ userId: user.id, role: user.role });
+    const refreshToken = await generateRefreshToken({ userId: user.id, role: user.role });
+    const hashedRefreshToken = await bcrypt.hash(refreshToken, 10); // Lower rounds for speed on transient tokens
+
+    await prisma.refreshToken.create({
+      data: {
+        tokenHash: hashedRefreshToken,
+        userId: user.id,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+      }
+    });
+
+    const emailHtml = await render(verifyUserEmail({ 
+        username, 
+        OTP: verifyCode 
+      }));
+      
+      const mailOptions = {
+        from: process.env.GMAIL_USER,
+        to: email,
+        subject: 'Verification Code for Quiz Platform',
+        html: emailHtml, 
+      };
+
+    //@ts-ignore
+    await transporter.sendMail(mailOptions);
+
+    // 5. Set Cookies
+    const cookieStore = await cookies();
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict" as const,
+      path: "/",
+    };
+
+    cookieStore.set("refreshToken", refreshToken, cookieOptions);
+    cookieStore.set("accessToken", accessToken, cookieOptions);
+
+    return Response.json({
+      msg: "Signup successful. Please check your email for the verification code.",
+      success: true
+    }, { status: 201 });
+
+  } catch (error) {
+    console.error("SIGNUP_ERROR:", error);
+    return Response.json({
+      msg: "Internal server error during signup",
+      error: error instanceof Error ? error.message : "Unknown error"
+    }, { status: 500 });
+  }
 }
