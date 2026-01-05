@@ -149,7 +149,6 @@ export default function CreateQuiz() {
             className="w-full px-3 py-2 border border-gray-300 rounded"
             placeholder="algebra, calculus, trigonometry"
           />
-          <p className="text-xs text-gray-500 mt-1">Separate multiple tags with commas</p>
         </div>
 
         <div className="flex gap-3 pt-2">

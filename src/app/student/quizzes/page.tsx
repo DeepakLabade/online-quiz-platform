@@ -14,7 +14,6 @@ export default function StudentQuizzesPage() {
     async function fetchQuizzes() {
       try {
         const res = await axios.get("/api/quiz/all");
-        // Accessing the quizzes array from your backend response
         setQuizzes(res.data.allQuizzes || []);
       } catch (err) {
         console.error("Error fetching quizzes:", err);
@@ -25,98 +24,78 @@ export default function StudentQuizzesPage() {
     fetchQuizzes();
   }, []);
 
-  // Simple search filter
   const filteredQuizzes = quizzes.filter(q => 
+    //@ts-ignore
     q.title.toLowerCase().includes(filter.toLowerCase()) ||
+    //@ts-ignore
     q.subject.toLowerCase().includes(filter.toLowerCase())
   );
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
+    <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-6xl mx-auto">
         
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800">Available Quizzes</h1>
-            <p className="text-gray-500 mt-1">Select a quiz to test your knowledge</p>
-          </div>
+        {/* Compact Header */}
+        <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200">
+          <h1 className="text-xl font-bold text-gray-800">Quizzes</h1>
           
-          <div className="w-full md:w-64">
+          <div className="flex items-center gap-3">
             <input 
               type="text"
-              placeholder="Search subject or title..."
-              className="w-full px-4 py-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              placeholder="Search..."
+              className="px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:border-blue-500 w-40 md:w-64"
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
             />
+            <button 
+              onClick={() => router.push("/student/dashboard")}
+              className="text-sm font-medium text-blue-600 hover:underline"
+            >
+              Dashboard
+            </button>
           </div>
         </div>
 
         {loading ? (
-          <div className="text-center py-20">
-            <p className="text-gray-500 font-medium">Loading quizzes...</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3].map((n) => (
+              <div key={n} className="h-32 bg-gray-200 animate-pulse rounded"></div>
+            ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredQuizzes.length > 0 ? (
               filteredQuizzes.map((quiz) => (
                 <div 
                   key={quiz.id} 
-                  className="bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col hover:shadow-md transition-shadow"
+                  className="bg-white border border-gray-200 rounded p-4 flex flex-col hover:shadow-sm"
                 >
-                  {/* Card Header (Subject Accent) */}
-                  <div className="bg-blue-600 h-2 w-full"></div>
-                  
-                  <div className="p-6 flex-1 flex flex-col">
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="text-xs font-bold text-blue-600 uppercase tracking-wide">
-                        {quiz.subject}
-                      </span>
-                      <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase border ${
-                        quiz.difficulty === 'hard' ? 'border-red-200 text-red-600 bg-red-50' : 
-                        quiz.difficulty === 'medium' ? 'border-yellow-200 text-yellow-700 bg-yellow-50' : 
-                        'border-green-200 text-green-600 bg-green-50'
-                      }`}>
-                        {quiz.difficulty}
-                      </span>
-                    </div>
-
-                    <h2 className="text-xl font-bold text-gray-800 mb-2 truncate">
-                      {quiz.title}
-                    </h2>
-
-                    <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
-                      <div className="flex items-center gap-1">
-                        <span>Grade:</span>
-                        <span className="font-semibold text-gray-700">{quiz.grade}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <span>Time:</span>
-                        <span className="font-semibold text-gray-700">{quiz.durationMinutes}m</span>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-1 mb-6">
-                      {quiz.tags?.map((tag, i) => (
-                        <span key={i} className="text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-                          #{tag}
-                        </span>
-                      ))}
-                    </div>
-
-                    <button 
-                      onClick={() => router.push(`/student/quiz/attempt/${quiz.id}`)}
-                      className="mt-auto w-full bg-gray-900 text-white py-2.5 rounded font-bold hover:bg-black transition-colors"
-                    >
-                      Start Quiz
-                    </button>
+                  <div className="flex justify-between items-start mb-1">
+                    <span className="text-[10px] font-bold text-blue-600 uppercase">
+                      {quiz.subject}
+                    </span>
+                    <span className="text-[10px] text-gray-400 font-medium capitalize">
+                      {quiz.difficulty}
+                    </span>
                   </div>
+
+                  <h2 className="text-md font-semibold text-gray-900 mb-1">{quiz.title}</h2>
+                  
+                  <div className="text-xs text-gray-500 mb-3">
+                    Grade {quiz.grade} • {quiz.durationMinutes}m
+                  </div>
+
+                  <button 
+                    onClick={() => router.push(`/student/quiz/attempt/${quiz.id}`)}
+                    className="mt-auto w-full bg-blue-600 text-white py-1.5 rounded text-sm font-medium hover:bg-blue-700"
+                  >
+                    Start Quiz
+                  </button>
                 </div>
               ))
             ) : (
-              <div className="col-span-full bg-white p-12 text-center rounded border border-dashed border-gray-300">
-                <p className="text-gray-500 font-medium">No quizzes match your search.</p>
+              <div className="col-span-full py-8 text-center text-sm text-gray-500">
+                No quizzes found.
               </div>
             )}
           </div>

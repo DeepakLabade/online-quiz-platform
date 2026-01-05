@@ -3,6 +3,7 @@
 import axios from "axios";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
+import { toast } from "sonner";
 
 type Option = { id: string; text: string };
 type Question = { id: string; text: string; options: Option[]; marks: number };
@@ -18,10 +19,8 @@ export default function TakeQuizPage() {
   const [loading, setLoading] = useState(true);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   
-  // Track the attempt ID from the backend to keep the session linked
   const [attemptId, setAttemptId] = useState<string | null>(null);
 
-  // Hardcoded for now, but you should get this from your Auth session (Clerk/NextAuth)
   const studentId = "student-id-from-auth"; 
 
   const finishQuiz = useCallback(async () => {
@@ -33,14 +32,15 @@ export default function TakeQuizPage() {
         studentId,
         questionId: currentQuestion?.id,
         selectedOption: selectedAnswers[currentQuestion?.id || ""],
-        isLastQuestion: true // This tells the backend to calculate score and close the attempt
+        isLastQuestion: true
       });
 
-      alert(`Quiz Finished! Your score: ${res.data.score}`);
+      console.log("data: " + res.data) //@ts-ignore
+      toast(`Quiz Finished! Your score: ${res.data.score}/${res.data.totalQuizMarks}`);
       router.push("/student/dashboard");
     } catch (err) {
       console.error("Finish error:", err);
-      alert("Failed to submit quiz");
+      toast("Failed to submit quiz");
     }
   }, [quizId, selectedAnswers, router, quiz, currentIndex, studentId]);
 
@@ -48,9 +48,9 @@ export default function TakeQuizPage() {
     async function fetchQuiz() {
       if (!quizId) return;
       try {
-        const res = await axios.get(`/api/quiz/${quizId}`);
-        if (res.data.success) {
-          setQuiz(res.data.quiz);
+        const res = await axios.get(`/api/quiz/${quizId}`); //@ts-ignore
+        if (res.data.success) {//@ts-ignore
+          setQuiz(res.data.quiz);//@ts-ignore
           setTimeLeft(res.data.quiz.durationMinutes * 60);
         }
       } catch (err) {
@@ -65,15 +65,20 @@ export default function TakeQuizPage() {
   useEffect(() => {
     if (timeLeft === null) return;
     if (timeLeft <= 0) { finishQuiz(); return; }
+    if (timeLeft == 10 * 60) {toast("10 min remaining")}
+    if (timeLeft == 5 * 60) {toast("5 min remaining")}
+    if (timeLeft == 4 * 60) {toast("4 min remaining")}
+    if (timeLeft == 3 * 60) {toast("3 min remaining")}
+    if (timeLeft == 2 * 60) {toast("2 min remaining")}
+    if (timeLeft == 1 * 60) {toast("1 min remaining")}
+
     const timerId = setInterval(() => setTimeLeft((p) => (p !== null ? p - 1 : null)), 1000);
     return () => clearInterval(timerId);
   }, [timeLeft, finishQuiz]);
 
   const handleOptionSelect = async (questionId: string, optionText: string) => {
-    // 1. Update UI immediately
     setSelectedAnswers((prev) => ({ ...prev, [questionId]: optionText }));
 
-    // 2. Save progress to backend (Auto-save)
     try {
       const res = await axios.post("/api/quiz/attempt", {
         quizId,
@@ -82,8 +87,8 @@ export default function TakeQuizPage() {
         selectedOption: optionText,
         isLastQuestion: false
       });
-      
-      if (res.data.attemptId) {
+      //@ts-ignore
+      if (res.data.attemptId) {//@ts-ignore
         setAttemptId(res.data.attemptId);
       }
     } catch (err) {
@@ -103,8 +108,8 @@ export default function TakeQuizPage() {
     return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
   };
 
-  if (loading) return <div className="p-10 text-center">Loading quiz...</div>;
-  if (!quiz) return <div className="p-10 text-center">Quiz not found.</div>;
+  if (loading) return <div className="p-10 text-center h-screen flex items-center justify-center">Loading quiz...</div>;
+  if (!quiz) return <div className="p-10 text-center h-screen flex items-center justify-center">Quiz not found.</div>;
 
   const currentQuestion = quiz.questions[currentIndex];
   const isLastQuestion = currentIndex === quiz.questions.length - 1;
@@ -114,14 +119,12 @@ export default function TakeQuizPage() {
     <div className="min-h-screen bg-gray-50 py-10 px-4">
       <div className="max-w-2xl mx-auto bg-white border border-gray-200 rounded-lg p-8 relative">
         
-        {/* Timer */}
         <div className={`fixed top-4 right-4 px-4 py-2 rounded-full font-mono font-bold shadow-sm border ${
           timeLeft && timeLeft < 60 ? "bg-red-50 text-red-600 border-red-200 animate-pulse" : "bg-white text-gray-700 border-gray-200"
         }`}>
           {timeLeft !== null ? formatTime(timeLeft) : "--:--"}
         </div>
 
-        {/* Progress */}
         <div className="mb-8">
           <h1 className="text-xl font-bold text-gray-800">{quiz.title}</h1>
           <div className="w-full bg-gray-100 h-1.5 mt-4 rounded-full overflow-hidden">
@@ -129,7 +132,6 @@ export default function TakeQuizPage() {
           </div>
         </div>
 
-        {/* Question */}
         <div className="mb-10">
           <p className="text-lg font-medium text-gray-900 mb-6">
             {currentQuestion.text}
@@ -162,7 +164,6 @@ export default function TakeQuizPage() {
           </div>
         </div>
 
-        {/* Navigation */}
         <div className="flex justify-between items-center border-t pt-6">
           <div className="text-sm text-gray-400">
             Question {currentIndex + 1} of {quiz.questions.length}

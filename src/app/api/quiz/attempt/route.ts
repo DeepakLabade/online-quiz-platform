@@ -6,7 +6,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     const userId = req.headers.get("user-id");
     console.log(userId)
-    const { quizId, studentId, questionId, selectedOption, isLastQuestion } = body;
+    const { quizId, questionId, selectedOption, isLastQuestion } = body;
 
     let attempt = await prisma.quizAttempt.findFirst({
       where: {
@@ -58,6 +58,12 @@ export async function POST(req: Request) {
       });
     }
 
+    const totalQuizMarks = await prisma.question.count({
+      where: {
+        quizId
+      }
+    })
+
     if (isLastQuestion) {
       const allAnswers = await prisma.attemptAnswer.findMany({
         where: { attemptId: attempt.id },
@@ -74,7 +80,7 @@ export async function POST(req: Request) {
         },
       });
 
-      return NextResponse.json({ message: "Quiz completed", score: finalScore });
+      return NextResponse.json({ message: "Quiz completed", score: finalScore, totalQuizMarks });
     }
 
     return NextResponse.json({ message: "Progress saved", attemptId: attempt.id });

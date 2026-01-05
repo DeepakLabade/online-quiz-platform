@@ -2,28 +2,28 @@
 import axios from 'axios';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 export default function CreateQuestion() {
   const [formData, setFormData] = useState({
     question: '',
     options: ['', ''],
-    correctAnswer: '' // Stores the actual text
+    correctAnswer: ''
   });
 
   const searchParams = useSearchParams();
   const router = useRouter();
   const quizId = searchParams.get('quizId');
 
-  const handleQuestionChange = (e) => {
+  const handleQuestionChange = (e: any) => {
     setFormData({ ...formData, question: e.target.value });
   };
 
-  const handleOptionChange = (index, value) => {
+  const handleOptionChange = (index: any, value: any) => {
     const newOptions = [...formData.options];
     const oldOptionValue = newOptions[index];
     newOptions[index] = value;
 
-    // If we are editing the option that was marked correct, update the correctAnswer string too
     const wasCorrect = formData.correctAnswer === oldOptionValue;
     
     setFormData({ 
@@ -37,11 +37,11 @@ export default function CreateQuestion() {
     setFormData({ ...formData, options: [...formData.options, ''] });
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
 
     if (!formData.correctAnswer) {
-      alert('Please select a correct answer');
+      toast('Please select a correct answer');
       return;
     }
 
@@ -52,9 +52,9 @@ export default function CreateQuestion() {
         options: formData.options,
         quizId: quizId
       });
-
+      //@ts-ignore
       if (res.data.success || res.status === 200) {
-        alert('Question added');
+        toast('Question added');
         setFormData({
           question: '',
           options: ['', ''],
@@ -101,7 +101,6 @@ export default function CreateQuestion() {
                 <input
                   type="radio"
                   name="correct"
-                  // Check against the string value
                   checked={formData.correctAnswer === option && option !== ''}
                   onChange={() => setFormData({ ...formData, correctAnswer: option })}
                   className="w-4 h-4"

@@ -32,6 +32,7 @@ export default function LoginPage() {
         router.push("/student/quizzes")
       }  
     } catch (error: any) {
+      setLoading(false)
       toast.error(
         error instanceof Error ? error.message : "Something went wrong"
       );
